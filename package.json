@@ -1,0 +1,22 @@
+{
+  "name": "chat-server",
+  "version": "1.0.0",
+  "description": "chat server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "chat",
+    "server"
+  ],
+  "author": "me",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^7.4.2"
+  },
+  "devDependencies": {
+    "webpack": "^5.11.1",
+    "webpack-cli": "^4.3.1"
+  }
+}
