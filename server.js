@@ -12,19 +12,29 @@ server.on('connection', (client, req) => {
     let isAlive = false;
     let user = {};
 
+    const send = (m) => client.send(JSON.stringify(m));
+
     client.on('message', (message) => {
         const msg = JSON.parse(message);
         switch (msg.type) {
             case 'LOGIN':
-                user = new User(msg.name);
+                const { name } = msg.info || {};
+                user = new User(name);
                 users[user.id] = user;
+                send({
+                    type: 'ONLINE',
+                    info: {
+                        name,
+                    },
+                });
                 sendAll({
                     type: 'CONNECTED',
                     info: {
-                        name: msg.name,
+                        name,
                         users: getUserNames(),
                     },
                 });
+                initStatusCheck();
                 break;
             case 'STATUS':
                 isAlive = true;
@@ -38,39 +48,29 @@ server.on('connection', (client, req) => {
 
     onconnect(client);
 
-    const interval = setInterval(() => {
-        if (!isAlive) {
-            clearInterval(interval);
-            client.terminate();
-            delete users[user.id];
-            sendAll({
-                type: 'DISCONNECTED',
-                info: {
-                    name: user.name,
-                    users: getUserNames(),
-                },
-            });
-        }
+    const initStatusCheck = () => {
+        const interval = setInterval(() => {
+            if (!isAlive) {
+                clearInterval(interval);
+                client.terminate();
+                delete users[user.id];
+                sendAll({
+                    type: 'DISCONNECTED',
+                    info: {
+                        name: user.name,
+                        users: getUserNames(),
+                    },
+                });
+            }
 
-        isAlive = false;
-    }, 40000);
+            isAlive = false;
+        }, 40000);
+    };
 });
 
 server.on('close', () => {
     clearInterval(interval);
 });
-
-// setWsHeartbeat(
-//     server,
-//     (ws, data, binary) => {
-//         if (data === '{"type":"ping"}') {
-//             // send pong if recieved a ping.
-//             ws.send('{"type":"pong"}');
-//             console.log('pong!');
-//         }
-//     },
-//     60000
-// );
 
 function saveMessage(message) {
     history.push(message);
@@ -81,19 +81,17 @@ function saveMessage(message) {
 
 const getUserNames = () => Object.values(users).map((user) => user.name);
 
-const send = (c, m) => c.send(JSON.stringify(m));
-
 function sendAll(message) {
     server.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            send(client, message);
+            client.send(JSON.stringify(message));
         }
     });
 }
 
 function onconnect(client) {
     if (history.length) {
-        history.forEach((msg) => send(client, msg));
+        history.forEach((msg) => client.send(JSON.stringify(msg)));
     } else {
         const msg = {
             type: 'MESSAGE',
@@ -102,7 +100,7 @@ function onconnect(client) {
                 text: 'Hi stranger...',
             },
         };
-        send(client, msg);
+        client.send(JSON.stringify(msg));
         history.push(msg);
     }
 }
