@@ -1,0 +1,4 @@
+{
+    "jwt_secret": "secret", 
+    "jwt_ws_secret": "ws-secret" 
+}
